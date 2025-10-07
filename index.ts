@@ -1,5 +1,6 @@
-import { registerRootComponent } from 'expo';
+import 'react-native-reanimated';// 항상 맨 위에
 
+import { registerRootComponent } from 'expo';
 import App from './App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

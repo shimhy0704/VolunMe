@@ -3,6 +3,7 @@
     "name": "VolunMe",
     "slug": "VolunMe",
     "version": "1.0.0",
+    "scheme": "volunme",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,6 +25,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "androidStatusBar": {
+      "translucent": false,
+      "barStyle": "dark-content",
+      "backgroundColor": "#ffffff"
     }
   }
 }
