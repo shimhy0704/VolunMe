@@ -1,5 +1,5 @@
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Heart,
   MapPin,
@@ -8,7 +8,7 @@ import {
   Reply,
   Search as SearchIcon,
 } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -26,7 +26,7 @@ import {
   MOCK_POSTS,
   type FeedComment,
   type FeedPost,
-} from "../lib/data/feedMock";
+} from "../../src/lib/data/feedMock";
 
 const ORANGE = "#FF8A00";
 const BG = "#EAEAEA";
@@ -48,22 +48,38 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
 
+  // 🔗 map.tsx에서 넘어온 파라미터
+  const { q, postId } = useLocalSearchParams<{
+    q?: string;
+    postId?: string;
+  }>();
+
   const [posts, setPosts] = useState<FeedPost[]>(
     () => JSON.parse(JSON.stringify(MOCK_POSTS)) as FeedPost[]
   );
 
+  // 검색어는 쿼리(q)로 초기화
   const [search, setSearch] = useState("");
+  useEffect(() => {
+    if (typeof q === "string" && q.trim()) setSearch(q);
+  }, [q]);
+
   const [openCommentId, setOpenCommentId] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<FeedComment | null>(null);
 
-  // 🔎 전 필드 검색 + 유형(모집/후기) 키워드도 포함
+  // 1) postId가 들어오면 해당 글만 강제 노출
+  // 2) 아니면 기존 검색 로직 적용
   const filteredPosts = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return posts;
+    if (typeof postId === "string" && postId) {
+      const only = posts.find((p) => p.id === postId);
+      return only ? [only] : [];
+    }
+    const qText = search.trim().toLowerCase();
+    if (!qText) return posts;
     return posts.filter((p) => {
       const haystack = [
-        TYPE_LABEL[p.type], // "모집" 또는 "후기"
+        TYPE_LABEL[p.type],
         p.author,
         p.title,
         p.desc,
@@ -75,9 +91,9 @@ export default function FeedScreen() {
       ]
         .join(" ")
         .toLowerCase();
-      return haystack.includes(q);
+      return haystack.includes(qText);
     });
-  }, [search, posts]);
+  }, [search, posts, postId]);
 
   const handleToggleLike = (id: string) => {
     setPosts((prev) =>
@@ -93,17 +109,17 @@ export default function FeedScreen() {
     );
   };
 
-  const handleAddComment = (postId: string) => {
+  const handleAddComment = (postId_: string) => {
     if (!newComment.trim()) return;
     setPosts((prev) =>
       prev.map((p) => {
-        if (p.id !== postId) return p;
+        if (p.id !== postId_) return p;
         const newC: FeedComment = {
           id: Math.random().toString(36).slice(2),
-          author: "나", // ✅ 내가 작성
+          author: "나",
           text: newComment.trim(),
           date: new Date().toISOString(),
-          replyTo: replyTo?.author, // ✅ 답글 대상 저장
+          replyTo: replyTo?.author ?? undefined,
         };
         return { ...p, comments: [...p.comments, newC] };
       })
@@ -218,7 +234,7 @@ export default function FeedScreen() {
           </Pressable>
         </View>
 
-        {/* 댓글 (버튼 바로 아래 표시) */}
+        {/* 댓글 */}
         {isCommentOpen && (
           <View style={styles.commentBox}>
             {(item.comments ?? []).map((c) => (
@@ -405,7 +421,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // --- Badge (모집/후기 공통) ---
+  // --- Badge ---
   badge: {
     backgroundColor: ORANGE,
     paddingHorizontal: 8,

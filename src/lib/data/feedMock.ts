@@ -1,4 +1,4 @@
-// app/lib/data/feedMock.ts
+// src/lib/data/feedMock.ts
 export type FeedType = "recruit" | "review";
 
 export type FeedComment = {
@@ -7,6 +7,11 @@ export type FeedComment = {
   text: string;
   date: string;
   replyTo?: string;    // 답글 대상 작성자 이름
+};
+
+export type GeoPoint = {
+  lat: number;
+  lng: number;
 };
 
 export type FeedPost = {
@@ -28,6 +33,9 @@ export type FeedPost = {
   likes: number;
   liked?: boolean;
   comments: FeedComment[];
+
+  // ✅ 지도 표시용 좌표 (있는 경우에만 지도에 표시)
+  coords?: GeoPoint;
 };
 
 export const MOCK_POSTS: FeedPost[] = [
@@ -41,7 +49,7 @@ export const MOCK_POSTS: FeedPost[] = [
     desc:
       "지원자격: 대학생이면 누구나 가능 (휴학생 불가)\n모집기간: 8월 28일~9월 30일\n봉사내용: 행사장 내 정리, 쓰레기 분리수거 등입니다. 좋은 추억 만들어가요!",
     date: "2025.10.07",
-    location: "서울특별시 노원구 서현동 68-3",
+    location: "서울특별시 성동구 뚝섬로 273",
     categories: ["돌봄", "청소"],
     capacity: 9,
     joined: 2,
@@ -54,14 +62,16 @@ export const MOCK_POSTS: FeedPost[] = [
       { id: "c1", author: "민지", text: "시간대가 어떻게 되나요?", date: "2025-10-07" },
       { id: "c2", author: "현수", text: "친구랑 둘이 신청해도 되나요?", date: "2025-10-07" },
     ],
+    // ✅ 성수/뚝섬로 인근 좌표 (대략값)
+    coords: { lat: 37.5313, lng: 127.0666 },
   },
   {
     id: "2",
-    type: "review", // ✅ 후기
+    type: "review", // ✅ 후기 (좌표 없음 → 지도 미표시)
     author: "호응",
     avatarUrl:
       "https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?w=256&auto=format&fit=crop&crop=faces",
-    title: "최서현 코딱지 구합니다.", // 예시 텍스트 그대로 사용
+    title: "최서현 코딱지 구합니다.",
     desc:
       "아이들을 엄청 좋아하는데 아이들과 하루종일 시간을 보낼 수 있어서 감사한 하루였습니다. 다음에도 또 참여하고 싶네요!",
     date: "2025.10.07",
@@ -83,7 +93,7 @@ export const MOCK_POSTS: FeedPost[] = [
     desc:
       "간단한 분리수거와 쓰레기 줍기 활동입니다.\n장갑과 집게는 제공됩니다.",
     date: "2025.10.06",
-    location: "서울특별시 광진구 능동로 190",
+    location: "인천광역시 연수구 센트럴로 123",
     categories: ["청소"],
     capacity: 20,
     joined: 11,
@@ -93,5 +103,7 @@ export const MOCK_POSTS: FeedPost[] = [
     likes: 4,
     liked: false,
     comments: [],
+    // ✅ 송도 센트럴파크 인근 좌표 (대략값)
+    coords: { lat: 37.3923, lng: 126.6449 },
   },
 ];
