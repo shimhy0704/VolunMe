@@ -54,6 +54,9 @@ export default function FeedScreen() {
     postId?: string;
   }>();
 
+  // ---------------------------
+  // 상태
+  // ---------------------------
   const [posts, setPosts] = useState<FeedPost[]>(
     () => JSON.parse(JSON.stringify(MOCK_POSTS)) as FeedPost[]
   );
@@ -68,10 +71,32 @@ export default function FeedScreen() {
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<FeedComment | null>(null);
 
-  // 1) postId가 들어오면 해당 글만 강제 노출
-  // 2) 아니면 기존 검색 로직 적용
+  // 🔄 Pull-to-Refresh
+  const [refreshing, setRefreshing] = useState(false);
+  // 새로고침 이후에는 라우트 파라미터(postId/q)를 무시하고 전체 피드 복구
+  const [ignoreRouteFilter, setIgnoreRouteFilter] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    // 1) 게시물 상태 초기화 (처음 앱 켠 상태와 동일)
+    setPosts(JSON.parse(JSON.stringify(MOCK_POSTS)) as FeedPost[]);
+    // 2) 검색/댓글/입력 등 초기화
+    setSearch("");
+    setOpenCommentId(null);
+    setNewComment("");
+    setReplyTo(null);
+    // 3) 라우트 필터 무시 → 전체 리스트 노출
+    setIgnoreRouteFilter(true);
+    // UX상 스피너가 보이도록 살짝 지연
+    setTimeout(() => setRefreshing(false), 400);
+  };
+
+  // ---------------------------
+  // 필터링
+  // ---------------------------
   const filteredPosts = useMemo(() => {
-    if (typeof postId === "string" && postId) {
+    // 새로고침 뒤에는 라우트 파라미터 무시
+    if (!ignoreRouteFilter && typeof postId === "string" && postId) {
       const only = posts.find((p) => p.id === postId);
       return only ? [only] : [];
     }
@@ -93,8 +118,11 @@ export default function FeedScreen() {
         .toLowerCase();
       return haystack.includes(qText);
     });
-  }, [search, posts, postId]);
+  }, [search, posts, postId, ignoreRouteFilter]);
 
+  // ---------------------------
+  // 액션
+  // ---------------------------
   const handleToggleLike = (id: string) => {
     setPosts((prev) =>
       prev.map((p) =>
@@ -128,6 +156,9 @@ export default function FeedScreen() {
     setReplyTo(null);
   };
 
+  // ---------------------------
+  // 렌더러
+  // ---------------------------
   const renderChip = (label: string) => (
     <View key={label} style={styles.chip}>
       <Text style={styles.chipText}>{label}</Text>
@@ -367,6 +398,9 @@ export default function FeedScreen() {
           paddingBottom: listPaddingBottom,
         }}
         showsVerticalScrollIndicator={false}
+        // 🔄 Pull-to-Refresh
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
       />
 
       {/* FAB */}
