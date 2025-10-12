@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>모집글 등록</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="origin">
+
+    <!-- Pretendard (SemiBold 사용) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+
+    <style>
+        :root{
+            color-scheme: light;
+            --bg:#F6F7F9;
+            --card:#FFFFFF;
+            --text:#1F2329;
+            --muted:#8B95A1;
+            --line:#E5E8EB;
+            --accent:#FF8A00;          /* 오렌지 포인트 */
+            --accent-press:#E97700;
+            --field:#F9FAFB;
+            --shadow: 0 6px 22px rgba(15, 23, 42, .06);
+            --radius:16px;
+            --radius-sm:12px;
+        }
+
+        html,body{height:100%}
+        body{
+            margin:0;
+            padding:24px;
+            background:var(--bg);
+            color:var(--text);
+            font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+            font-weight:600; /* SemiBold */
+            line-height:1.55;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+        }
+
+        h1{
+            margin:10px 0 18px;
+            font-size:22px;
+            letter-spacing:-.2px;
+        }
+
+        /* ===== 상단 탭(모집/후기) : 디자인만 ===== */
+        .tabs-wrap{
+            max-width:780px;
+            margin:0 auto 10px;
+            display:flex;
+            gap:14px;
+            align-items:center;
+        }
+        .tab-pill{
+            flex:0 0 150px;
+            height:44px;
+            border-radius:12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:16px;
+            box-shadow:var(--shadow);
+            user-select:none;
+            text-decoration: none
+        }
+        .tab-pill.is-active{
+            background:var(--accent);
+            color:#fff;
+        }
+        .tab-pill.is-inactive{
+            background:#D9D9D9;
+            color:#333;
+        }
+
+        /* 카드형 폼 */
+        form{
+            max-width:780px;
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            padding:22px;
+            margin:0 auto; /* 탭과 폭 맞춤 */
+        }
+
+        .field{ margin:16px 0; }
+
+        label{
+            display:block;
+            margin:0 0 8px;
+            font-size:14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="datetime-local"],
+        textarea,
+        select{
+            width:100%;
+            padding:14px 14px;
+            border-radius:14px;
+            border:1px solid var(--line);
+            background:var(--field);
+            box-sizing:border-box;
+            font-size:15px;
+            outline:none;
+            transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+        }
+        textarea{ resize:vertical; min-height:120px; }
+
+        input::placeholder, textarea::placeholder{ color:#B0B8C1; font-weight:600; }
+        select{ appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%238B95A1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:40px; }
+
+        input:focus, textarea:focus, select:focus{
+            border-color:var(--accent);
+            background:#FFF;
+            box-shadow:0 0 0 4px rgba(255,138,0,.12);
+        }
+
+        .row{ display:flex; gap:12px; }
+        .row .field{ flex:1; }
+
+        /* Map 카드 */
+        #mapWrap{
+            position:relative;
+            overflow:hidden;
+            border:1px solid var(--line);
+            border-radius:var(--radius-sm);
+            background:#fff;
+        }
+        #map{ width:100%; height:360px; }
+        #mapHelp{
+            position:relative;
+            padding:10px 12px 12px 12px;
+            font-size:13px;
+            background:#FAFAFB;
+            border-top:1px solid var(--line);
+            display:flex;
+            align-items:flex-start;
+            gap:12px;
+        }
+        #mapHelp>div:first-child{ color:var(--muted); }
+
+        #mapHelp .btns{
+            margin-left:auto;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+        }
+        #mapHelp .btns button{
+            min-width:92px;
+            padding:10px 12px;
+            border-radius:14px;
+            border:0;
+            background:#111827;
+            color:#fff;
+            cursor:pointer;
+            font-size:13px;
+            box-shadow:0 4px 14px rgba(2,6,23,.15);
+            transition: transform .06s ease, opacity .15s ease;
+        }
+        #mapHelp .btns button:active{ transform:translateY(1px); opacity:.9; }
+
+        small{ color:var(--muted); display:block; margin-top:6px; font-weight:600; }
+
+        .actions{
+            margin-top:24px;
+            display:flex;
+            gap:10px;
+        }
+        button{
+            padding:12px 18px;
+            border-radius:14px;
+            border:0;
+            background:var(--accent);
+            color:#fff;
+            cursor:pointer;
+            box-shadow:0 10px 22px rgba(255,138,0,.28);
+            transition: background .15s ease, transform .06s ease, box-shadow .15s ease;
+            font-size:15px;
+        }
+        button:hover{ background:var(--accent-press); }
+        button:active{ transform:translateY(1px); }
+
+        a.button-like{
+            display:inline-block;
+            padding:12px 18px;
+            border-radius:14px;
+            border:1px solid var(--line);
+            background:#fff;
+            color:#var(--text);
+            text-decoration:none;
+            transition: background .15s ease, box-shadow .15s ease, transform .06s ease;
+        }
+        a.button-like:hover{ background:#FDFDFE; box-shadow:0 6px 14px rgba(15,23,42,.06); }
+        a.button-like:active{ transform:translateY(1px); }
+
+        .meta{
+            max-width:780px;
+            margin:0 auto 12px;
+            color:var(--muted);
+        }
+        .meta strong{ color:var(--text); }
+
+        @media (max-width:640px){
+            body{ padding:18px; }
+            form{ padding:18px; border-radius:14px; }
+            .row{ flex-direction:column; gap:0; }
+            #map{ height:300px; }
+            .tab-pill{ flex:1 1 0; }
+        }
+    </style>
+
+    <!-- Kakao Maps SDK: services 포함(역지오코딩) -->
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=aabddec83fa66a4258fb57e94b4d61e1&libraries=services"></script>
+</head>
+<body>
+
+<!-- 상단 탭 (모양만, 동작 없음) -->
+<div class="tabs-wrap">
+    <div class="tab-pill is-active">모집</div>
+    <a th:href="@{/posts/new(type='review')}" class="tab-pill is-inactive">후기</a>
+</div>
+<div class="meta" th:if="${ownerName != null}">
+    주최자: <strong th:text="${ownerName}">홍길동</strong>
+</div>
+<div class="meta" th:if="${today != null}">
+    오늘: <span th:text="${today}">2025-10-06</span>
+</div>
+
+<!-- MVC submit -->
+<form th:action="@{/api/recruits/form}" method="post" enctype="multipart/form-data">
+    <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+    <div class="field">
+        <label for="title">제목<span style="color:#d00">*</span></label>
+        <input id="title" name="title" type="text" maxlength="120" required placeholder="제목을 입력하세요" />
+    </div>
+
+    <div class="field">
+        <label for="description">내용<span style="color:#d00">*</span></label>
+        <textarea id="description" name="description" required placeholder="모집 내용을 입력하세요"></textarea>
+    </div>
+
+    <div class="field">
+        <label for="category">카테고리<span style="color:#d00">*</span></label>
+        <select id="category" name="category" required>
+            <option value="">선택</option>
+            <option value="환경">환경</option>
+            <option value="돌봄">돌봄</option>
+            <option value="교육">교육</option>
+            <option value="복지">복지</option>
+            <option value="문화">문화</option>
+            <option value="동물">동물</option>
+            <option value="재능기부">재능기부</option>
+            <option value="안전">안전</option>
+            <option value="기타">기타</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="address">주소(선택, 지도 클릭 시 자동 입력)</label>
+        <input id="address" name="address" type="text" placeholder="지도를 클릭하면 주소가 채워집니다" />
+    </div>
+
+    <div class="row">
+        <div class="field">
+            <label for="lat">위도(선택)</label>
+            <input id="lat" name="lat" type="number" step="0.000001" placeholder="지도 클릭 시 자동 입력" />
+        </div>
+        <div class="field">
+            <label for="lng">경도(선택)</label>
+            <input id="lng" name="lng" type="number" step="0.000001" placeholder="지도 클릭 시 자동 입력" />
+        </div>
+    </div>
+
+    <div class="field">
+        <label>위치 선택 (지도를 클릭하세요)</label>
+        <div id="mapWrap">
+            <div id="map"></div>
+            <div id="mapHelp">
+                <div>지도를 클릭하면 마커가 찍히고, 주소/위도/경도가 입력됩니다.</div>
+                <div class="btns">
+                    <button type="button" id="btnMyPos">내 위치로</button>
+                    <button type="button" id="btnClear">선택 해제</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="field">
+        <label for="capacity">정원(선택, 비우면 무제한)</label>
+        <input id="capacity" name="capacity" type="number" min="1" placeholder="예: 10" />
+    </div>
+
+    <div class="field">
+        <label for="startTime">봉사 시작 시간<span style="color:#d00">*</span></label>
+        <input id="startTime" name="startTime" type="datetime-local" required />
+        <small>예: 2025-10-06 20:00 (초는 생략)</small>
+    </div>
+
+    <div class="actions">
+        <button type="submit">등록</button>
+        <a href="/map" class="button-like">취소</a>
+    </div>
+</form>
+
+<script>
+    // 과거 시간 선택 방지 (기능 변경 없음)
+    (function () {
+        const pad = n => String(n).padStart(2, '0');
+        const now = new Date();
+        theY = now.getFullYear ? now.getFullYear() : new Date().getFullYear();
+        const y = now.getFullYear();
+        const m = pad(now.getMonth() + 1);
+        const d = pad(now.getDate());
+        const hh = pad(now.getHours());
+        const mm = pad(now.getMinutes());
+        document.getElementById('startTime').min = `${y}-${m}-${d}T${hh}:${mm}`;
+    })();
+
+    // Kakao Map (기능 변경 없음)
+    if (typeof kakao === 'undefined') {
+        alert('카카오 지도 로드 실패: 앱키/도메인을 확인하세요.');
+    } else {
+        const $lat = document.getElementById('lat');
+        const $lng = document.getElementById('lng');
+        const $addr = document.getElementById('address');
+
+        const DEFAULT_CENTER = new kakao.maps.LatLng(37.456, 126.705); // 인천
+        const map = new kakao.maps.Map(document.getElementById('map'), { center: DEFAULT_CENTER, level: 6 });
+        const geocoder = new kakao.maps.services.Geocoder();
+        let marker = new kakao.maps.Marker({ map: null });
+
+        function setPoint(lat, lng) {
+            const latlng = new kakao.maps.LatLng(lat, lng);
+            marker.setMap(map);
+            marker.setPosition(latlng);
+            $lat.value = lat.toFixed(6);
+            $lng.value = lng.toFixed(6);
+
+            geocoder.coord2Address(lng, lat, function (result, status) {
+                if (status === kakao.maps.services.Status.OK && result && result[0]) {
+                    const road = result[0].road_address?.address_name;
+                    const jibun = result[0].address?.address_name;
+                    if (!$addr.value) $addr.value = road || jibun || '';
+                }
+            });
+        }
+
+        kakao.maps.event.addListener(map, 'click', function (e) {
+            setPoint(e.latLng.getLat(), e.latLng.getLng());
+        });
+
+        document.getElementById('btnMyPos').addEventListener('click', function () {
+            if (!navigator.geolocation) return alert('브라우저가 위치 접근을 지원하지 않습니다.');
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    const { latitude, longitude } = pos.coords;
+                    const ll = new kakao.maps.LatLng(latitude, longitude);
+                    map.setCenter(ll);
+                    setPoint(latitude, longitude);
+                },
+                () => alert('현재 위치를 가져올 수 없습니다.'),
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        });
+
+        document.getElementById('btnClear').addEventListener('click', function () {
+            marker.setMap(null);
+            $lat.value = '';
+            $lng.value = '';
+            // $addr.value = ''; // 주소까지 비우려면 주석 해제
+        });
+    }
+</script>
+</body>
+</html>

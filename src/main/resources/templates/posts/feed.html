@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>VolunMe — 피드</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="referrer" content="origin" />
+    <meta name="_csrf_header" th:content="${_csrf?.headerName}" />
+    <meta name="_csrf" th:content="${_csrf?.token}" />
+
+    <!-- Pretendard Webfont -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+
+    <style>
+        :root{
+            --accent:#FF9E42;              /* 포인트 주황 */
+            --bg:#f5f5f7;
+            --ink:#111827;
+            --muted:#6b7280;
+            --chip:#DFDFDF;                /* 봉사일시/정원/카테고리 */
+            --recruitBox:#F0F0F0;          /* 모집요약/댓글 입력/로딩 박스 */
+            --white:#ffffff;
+        }
+
+        *{box-sizing:border-box}
+        html,body{height:100%}
+
+        /* 전체 기본 폰트: Pretendard-Medium */
+        body{
+            margin:0;background:var(--bg);color:var(--ink);
+            font-family:"Pretendard",Pretendard,system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;
+            font-weight:500;
+        }
+
+        /* ===== 상단 검색 ===== */
+        .topbar{position:sticky;top:0;z-index:20;background:#fff}
+        .topbar-inner{max-width:720px;margin:0 auto;padding:12px}
+        .search{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+        .search .lens{width:18px;height:18px;border:2px solid #c9c9c9;border-radius:50%;position:relative;flex:0 0 18px}
+        .search .lens::after{content:"";position:absolute;right:-6px;bottom:-6px;width:8px;height:2px;background:#c9c9c9;transform:rotate(45deg);border-radius:2px}
+        .search input{border:0;outline:0;flex:1;font:inherit;background:transparent}
+
+        /* ===== 레이아웃 ===== */
+        .wrap{max-width:720px;margin:0 auto;padding:0 12px 200px}
+
+        /* ===== 카드 ===== */
+        .card{
+            background:#fff;border:none;border-radius:22px;overflow:hidden;
+            box-shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+            margin:14px 0;padding:12px;
+        }
+        .card-head{display:flex;gap:12px;align-items:center}
+        .avatar{display:block;width:40px;height:40px;border-radius:50%;overflow:hidden;flex:0 0 40px}
+        .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+
+        .meta .author{display:flex;align-items:center;gap:8px;font-size:14px}
+        .meta .author a{color:inherit;text-decoration:none}
+        .meta .author a:hover{text-decoration:underline}
+        .meta .time{font-size:12px;color:var(--muted)}
+
+        .type-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;line-height:1}
+        .type-badge.recruit{background:rgba(255,158,66,.12);color:var(--accent)}
+        .type-badge.review{background:#e8f0ff;color:#2f65ff}
+
+        /* 게시글 제목만 Bold */
+        .title{
+            padding:6px 2px 0;margin:0 0 6px;
+            font-family:"Pretendard Bold","Pretendard",system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;
+            font-weight:700;
+        }
+        .body{padding:0 2px 8px;font-size:14px;line-height:1.55}
+
+        /* 미디어 (있다면) */
+        .media img,.media video{display:block;margin:0 auto;max-width:100%;max-height:520px;width:auto;height:auto}
+
+        /* ===== 모집 요약 ===== */
+        .recruit-box{
+            margin:10px 0 8px;border:none;border-radius:16px;padding:12px;background:var(--recruitBox);
+        }
+        .recruit-box .muted{color:var(--muted)}
+
+        .r-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+        .r-head strong{font-weight:700}
+        .r-badge{font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(255,158,66,.2);color:var(--accent)}
+        .r-addr{font-size:13px;color:#374151;margin:4px 0;padding-left:22px;position:relative}
+
+        /* map-pin 아이콘 (lucide 실루엣) */
+        .r-addr::before{
+            content:"";position:absolute;left:4px;top:2px;width:14px;height:14px;background:currentColor;opacity:.9;
+            -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="%23000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 10.61c0 5.52-8.84 10.89-8.84 10.89S3.16 16.13 3.16 10.61a8.84 8.84 0 1 1 17.68 0Z"/><circle cx="12" cy="10.5" r="3"/></svg>') no-repeat center / contain;
+            mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="%23000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 10.61c0 5.52-8.84 10.89-8.84 10.89S3.16 16.13 3.16 10.61a8.84 8.84 0 1 1 17.68 0Z"/><circle cx="12" cy="10.5" r="3"/></svg>') no-repeat center / contain;
+        }
+
+        .r-kv{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+        .chip{font-size:12px;color:#222;background:var(--chip);border:none;border-radius:999px;padding:5px 10px}
+
+        .r-acts{display:flex;gap:8px;margin-top:10px}
+        /* 버튼들 크기/두께 통일 + 밑줄 제거 */
+        .btn{display:inline-block;text-decoration:none;border:none;background:#fff;color:#111;border-radius:12px;
+            padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer}
+        .btn.detail{background:#fff}
+        .btn.primary{background:var(--accent);color:#fff}
+        .btn[disabled]{opacity:.8;cursor:not-allowed;background:var(--accent);color:#fff}
+
+        /* ===== 액션(좋아요) ===== */
+        .actions{display:flex;align-items:center;gap:12px;padding:10px 2px 0;border-top:none}
+        /* 하트 아이콘 제거 → 텍스트만 */
+        .like{cursor:pointer;font-weight:700}
+        .count{color:#666;font-size:14px}
+
+        /* ===== 댓글 ===== */
+        .comments{background:transparent;border-top:none}
+        .c-wrap{padding:8px 2px 12px}
+        .c-form textarea{
+            width:100%;min-height:64px;border:none;border-radius:12px;padding:10px 12px;font:inherit;background:var(--recruitBox);
+        }
+        .c-form .c-submit{
+            margin-top:8px;border:none;background:var(--accent);color:#fff;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer
+        }
+        .c-list .c-item{
+            background:#fff;border:none;border-radius:14px;padding:10px;margin-top:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)
+        }
+        .c-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#666;margin-bottom:6px}
+        .c-name{font-weight:700;color:#333;margin-right:6px}
+        .c-actions{display:flex;gap:6px}
+        .c-btn{font-size:12px;background:var(--recruitBox);border:none;border-radius:8px;padding:4px 10px;cursor:pointer}
+        .c-btn.delete{background:#ffeaea;color:#d33}
+        .c-body{white-space:pre-wrap;font-size:14px;color:#222}
+        .c-replies{margin-top:6px;margin-left:8px}
+        .c-replies .c-item{background:#fff5;box-shadow:none}
+        .c-reply-form textarea{
+            width:100%;min-height:44px;border:none;border-radius:10px;padding:8px 10px;font:inherit;background:var(--chip);
+        }
+        .c-reply-form .c-submit{
+            margin-top:6px;border:none;background:#0b5;color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer
+        }
+        .c-pager{display:flex;gap:10px;align-items:center;justify-content:center;padding:10px 0 2px;color:#666;font-size:13px}
+        .c-pager .c-page-btn{background:var(--recruitBox);border:none;padding:6px 10px;border-radius:8px;cursor:pointer}
+        .c-pager .c-page-btn[disabled]{opacity:.5;cursor:not-allowed}
+
+        /* ===== 플로팅 버튼 & 탭바 (home.html 동일) ===== */
+        .fab{
+            position:fixed; right:calc(50% - 420px/2 + 18px); bottom:140px;
+            width:80px; height:80px; border-radius:50%; background:var(--accent);
+            display:grid; place-items:center; color:#fff; text-decoration:none; border:none; z-index:1000;
+        }
+        @media (max-width:440px){ .fab{ right:18px } }
+        .ico{ width:36px; height:36px; display:block }
+
+        .tabbar{
+            position:fixed; left:50%; transform:translateX(-50%);
+            bottom:0; width:100%; max-width:420px; background:#f9fafb;
+            border-top:1px solid #eaeaea; display:grid; grid-template-columns:repeat(4,1fr);
+            padding:13px 8px 50px; gap:6px; z-index:900;
+            /* 하단 네비는 시스템 폰트 유지 */
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans KR",sans-serif;
+        }
+        .tab{ display:flex; flex-direction:column; align-items:center; gap:8px;
+            text-decoration:none; color:#6b7280; font-size:12px }
+        .tab.active{ color:var(--accent) }
+        .tab svg{ width:26px; height:26px }
+    </style>
+</head>
+<body>
+<!-- 상단 검색 -->
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="search">
+            <span class="lens" aria-hidden="true"></span>
+            <input id="feed-search" type="search" placeholder="제목·내용 검색" aria-label="검색" />
+        </div>
+    </div>
+</div>
+
+<main class="wrap">
+    <!-- 카드 리스트 -->
+    <article th:if="${slice != null}"
+             th:each="post : ${slice.content}"
+             class="card"
+             th:attr="data-post-id=${post.id}, data-recruit-id=${post.recruitId}"
+             th:with="
+               isRecruit=${post.recruitId != null},
+               isReview=${post.recruitId == null and #strings.startsWith(post.title,'[후기]')},
+               cleanTitle=${post.title != null ? post.title.replaceFirst('^\\[(후기|모집)\\]\\s*','') : ''}
+             ">
+        <!-- 헤더 -->
+        <header class="card-head"
+                th:with="avatarUrl=${avatarMap[post.member.id] != null ? avatarMap[post.member.id] : '/img/bearhead.png'}">
+            <a class="avatar"
+               th:href="@{/users/{id}/mypage(id=${post.member.id})}"
+               title="프로필로 이동">
+                <img th:src="${avatarUrl}" alt="profile" referrerpolicy="no-referrer" />
+            </a>
+
+            <div class="meta">
+                <div class="author">
+                    <a class="author-link"
+                       th:href="@{/users/{id}/mypage(id=${post.member.id})}"
+                       th:text="${post.member.displayName}">작성자</a>
+                    <span class="type-badge recruit" th:if="${isRecruit}">모집</span>
+                    <span class="type-badge review"  th:if="${isReview}">후기</span>
+                </div>
+                <div class="time" th:text="${#temporals.format(post.createdDate,'yyyy.MM.dd HH:mm')}">시간</div>
+            </div>
+        </header>
+
+        <!-- 제목 -->
+        <h3 class="title" th:text="${cleanTitle}">제목</h3>
+
+        <!-- 본문 -->
+        <div class="body" th:utext="${#strings.replace(#strings.escapeXml(post.content), '\n', '<br/>')}">내용</div>
+
+        <!-- 모집 요약 (동적 로드) -->
+        <section class="recruit-box" th:if="${post.recruitId != null}">
+            <div class="muted">모집글 정보를 불러오는 중…</div>
+        </section>
+
+        <!-- 액션 -->
+        <div class="actions">
+            <span class="like" th:classappend="${liked[post.id]} ? ' liked' : ''"
+                  th:text="${liked[post.id]} ? '♥ 좋아요 취소' : '♡ 좋아요'">♡ 좋아요</span>
+            <span class="count" th:text="${post.likeCount()} + '명이 좋아합니다'">0명이 좋아합니다</span>
+        </div>
+
+        <!-- 댓글 -->
+        <section class="comments" th:attr="data-post-id=${post.id}">
+            <div class="c-wrap">
+                <form class="c-form">
+                    <textarea class="c-content" placeholder="댓글을 입력하세요" required></textarea>
+                    <button type="submit" class="c-submit">등록</button>
+                </form>
+                <div class="c-list"></div>
+                <div class="c-pager" style="display:none;">
+                    <button class="c-page-btn c-prev">이전</button>
+                    <span class="c-page-text">1 / 1</span>
+                    <button class="c-page-btn c-next">다음</button>
+                </div>
+            </div>
+        </section>
+    </article>
+
+    <!-- 비어 있을 때 -->
+    <div th:if="${slice == null or #lists.isEmpty(slice.content)}"
+         style="text-align:center;color:#666;padding:24px 0;">
+        아직 게시글이 없습니다.
+    </div>
+
+    <!-- 페이지네이션 -->
+    <div th:if="${slice != null and slice.totalPages > 1}" style="text-align:center;padding:16px">
+        <a th:if="${slice.hasPrevious()}" th:href="@{/posts(page=${slice.number - 1})}">이전</a>
+        <span> [[${slice.number + 1}]] / [[${slice.totalPages}]] </span>
+        <a th:if="${slice.hasNext()}" th:href="@{/posts(page=${slice.number + 1})}">다음</a>
+    </div>
+</main>
+
+<!-- 모집글 작성 플로팅 버튼 (home.html 동일) -->
+<a class="fab" th:href="@{/recruits/new}" aria-label="모집글 작성" title="모집글 작성">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        <path d="m15 5 3 3"/>
+    </svg>
+</a>
+
+<!-- 하단 탭바 (home.html 동일) -->
+<nav class="tabbar" aria-label="하단 내비게이션">
+    <a class="tab" th:href="@{/}">
+        <!-- house -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10.5 12 3l9 7.5"/>
+            <path d="M9 21V9h6v12"/>
+        </svg>
+        <span>홈</span>
+    </a>
+
+    <a class="tab active" th:href="@{/posts}">
+        <!-- menu/list -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h10"/>
+        </svg>
+        <span>피드</span>
+    </a>
+
+    <a class="tab" th:href="@{/map}">
+        <!-- map-pin -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.84 10.61c0 5.52-8.84 10.89-8.84 10.89S3.16 16.13 3.16 10.61a8.84 8.84 0 1 1 17.68 0Z"/>
+            <circle cx="12" cy="10.5" r="3"/>
+        </svg>
+        <span>지도</span>
+    </a>
+
+    <a class="tab" th:href="@{/mypage}">
+        <!-- user -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21a8 8 0 1 0-16 0"/>
+            <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>마이페이지</span>
+    </a>
+</nav>
+
+<script>
+    // ===== CSRF =====
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+    const csrfToken  = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+    function withCsrf(init = {}){ if(!csrfHeader || !csrfToken) return init; init.headers = init.headers || {}; init.headers[csrfHeader] = csrfToken; return init; }
+
+    // ===== 공통 유틸 =====
+    function isSuccessish(res){ return (res.status >= 200 && res.status < 300) || (res.status >= 300 && res.status < 400); }
+    async function tryJson(res){ const ct = res.headers.get('content-type') || ''; if(ct.includes('application/json')){ try{ return await res.json(); }catch{return null;} } return null; }
+
+    // ===== 좋아요 =====
+    document.addEventListener('click', async (e)=>{
+        const likeEl = e.target.closest('.like');
+        if(!likeEl) return;
+        const card = likeEl.closest('.card');
+        const postId = card.dataset.postId;
+        const res = await fetch(`/api/posts/${postId}/like`, withCsrf({ method:'POST' }));
+        if(res.status === 401){ alert('로그인이 필요합니다.'); return; }
+        const data = (await tryJson(res)) || { liked:false, count:0 };
+        likeEl.classList.toggle('liked', !!data.liked);
+        likeEl.textContent = data.liked ? '♥ 좋아요 취소' : '♡ 좋아요';
+        card.querySelector('.count').textContent = (data.count ?? 0) + '명이 좋아합니다';
+    });
+
+    // ===== 댓글 =====
+    const state = new Map(); // postId -> {page,size}
+    function fmtDate(iso){ try{ const d=new Date(iso); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}` }catch{ return iso; } }
+
+    function renderCommentNode(postId, c){
+        const w = document.createElement('div');
+        w.className = 'c-item';
+        w.dataset.commentId = c.id;
+        w.innerHTML = `
+        <div class="c-head">
+          <div><span class="c-name">${c.memberName ?? '익명'}</span><span>${fmtDate(c.createdAt)}</span></div>
+          <div class="c-actions">
+            <button type="button" class="c-btn c-reply">답글</button>
+            <button type="button" class="c-btn delete ${c.canDelete ? '' : 'd-none'}" data-role="delete" data-id="${c.id}">삭제</button>
+          </div>
+        </div>
+        <div class="c-body">${c.content ?? ''}</div>
+        <div class="c-replies"></div>
+        <form class="c-reply-form" style="display:none">
+          <textarea placeholder="답글을 입력하세요" required></textarea>
+          <button type="submit" class="c-submit">등록</button>
+        </form>`;
+
+        const replies = w.querySelector('.c-replies');
+        (c.replies || []).forEach(r => {
+            const el = document.createElement('div');
+            el.className = 'c-item';
+            el.innerHTML = `
+          <div class="c-head">
+            <div><span class="c-name">${r.memberName ?? '익명'}</span><span>${fmtDate(r.createdAt)}</span></div>
+            <div class="c-actions">
+              <button type="button" class="c-btn delete ${r.canDelete ? '' : 'd-none'}" data-role="delete" data-id="${r.id}">삭제</button>
+            </div>
+          </div>
+          <div class="c-body">${r.content ?? ''}</div>`;
+            replies.appendChild(el);
+        });
+
+        w.querySelector('.c-reply-form').addEventListener('submit', async (e)=>{
+            e.preventDefault();
+
+            const formEl   = e.currentTarget;
+            const textarea = formEl.querySelector('textarea');
+            const content  = textarea.value.trim();
+            if(!content) { textarea.focus(); return; }
+
+            const submitBtn = formEl.querySelector('.c-submit');
+            const btnText   = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '등록 중...';
+
+            try {
+                const fd = new FormData(formEl);
+                fd.set('content', content);
+                fd.set('parentId', c.id);
+
+                const res  = await fetch(`/api/posts/${postId}/comments`, withCsrf({ method:'POST', body: fd }));
+                const data = await tryJson(res);
+
+                if (res.status === 401) {
+                    alert((data && data.message) || '로그인이 필요합니다.');
+                    return;
+                }
+                if (!isSuccessish(res)) {
+                    alert((data && data.message) || '댓글 등록 실패');
+                    return;
+                }
+
+                const newReply = {
+                    id:         data?.id ?? ('tmp-' + Date.now()),
+                    memberName: data?.memberName ?? '나',
+                    createdAt:  data?.createdAt ?? new Date().toISOString(),
+                    content:    data?.content ?? content,
+                    canDelete:  true
+                };
+
+                const replies = w.querySelector('.c-replies');
+                const el = document.createElement('div');
+                el.className = 'c-item';
+                el.dataset.commentId = newReply.id;
+                el.innerHTML = `
+          <div class="c-head">
+            <div><span class="c-name">${newReply.memberName}</span><span>${fmtDate(newReply.createdAt)}</span></div>
+            <div class="c-actions">
+              <button type="button" class="c-btn delete ${newReply.canDelete ? '' : 'd-none'}" data-role="delete" data-id="${newReply.id}">삭제</button>
+            </div>
+          </div>
+          <div class="c-body">${newReply.content}</div>
+        `;
+                replies.appendChild(el);
+                el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+                formEl.reset();
+                formEl.style.display = 'none';
+            } catch (err) {
+                console.error(err);
+                alert('네트워크 오류로 등록에 실패했어요.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = btnText;
+            }
+        });
+
+        return w;
+    }
+
+    async function loadComments(postId){
+        const s = state.get(postId) || { page:0, size:10 };
+        state.set(postId, s);
+        const root = document.querySelector(`.comments[data-post-id="${postId}"]`);
+        if(!root) return;
+        const list = root.querySelector('.c-list');
+        const pager = root.querySelector('.c-pager');
+        const prev  = root.querySelector('.c-prev');
+        const next  = root.querySelector('.c-next');
+        const txt   = root.querySelector('.c-page-text');
+
+        const res = await fetch(`/api/posts/${postId}/comments?page=${s.page}&size=${s.size}&_=${Date.now()}`, { cache: 'no-store' });
+
+        if(!res.ok){ if(res.status===401) alert('로그인이 필요합니다.'); return; }
+        const data = await res.json();
+        list.innerHTML = '';
+        (data.content || []).forEach(c => list.appendChild(renderCommentNode(postId, c)));
+        const pages = data.totalPages ?? 1, cur = data.page ?? 0;
+        txt.textContent = `${cur + 1} / ${pages}`;
+        pager.style.display = pages > 1 ? '' : 'none';
+        prev.disabled = cur <= 0; next.disabled = cur >= pages - 1;
+    }
+
+    function bindCommentsForCard(card){
+        const postId = card.dataset.postId;
+        const cRoot = card.querySelector('.comments');
+        const form  = cRoot.querySelector('.c-form');
+        const area  = cRoot.querySelector('.c-content');
+        const prev  = cRoot.querySelector('.c-prev');
+        const next  = cRoot.querySelector('.c-next');
+
+        form.addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            const t = area.value.trim(); if(!t) return;
+            const fd = new FormData(); fd.append('content', t);
+            const res = await fetch(`/api/posts/${postId}/comments`, withCsrf({ method:'POST', body:fd }));
+            const data = await tryJson(res);
+            if(isSuccessish(res) && (!data || data.ok !== false)){
+                area.value = '';
+                state.set(postId, { page:0, size:(state.get(postId)?.size || 10) });
+                await loadComments(postId);
+            } else if(res.status === 401){
+                alert((data && data.message) || '로그인이 필요합니다.');
+            } else {
+                alert((data && data.message) || '댓글 등록 실패');
+            }
+        });
+
+        cRoot.addEventListener('click', async (e)=>{
+            const replyBtn = e.target.closest('.c-btn.c-reply');
+            if (replyBtn) {
+                const item = replyBtn.closest('.c-item');
+                const form = item?.querySelector('.c-reply-form');
+                if (form) {
+                    const hidden = form.style.display === 'none' || getComputedStyle(form).display === 'none';
+                    form.style.display = hidden ? '' : 'none';
+                    if (hidden) form.querySelector('textarea')?.focus();
+                }
+                return;
+            }
+
+            const del = e.target.closest('[data-role="delete"]');
+            if (!del) return;
+            if (!confirm('삭제하시겠습니까?')) return;
+            const cid = del.dataset.id;
+            const r = await fetch(`/api/posts/${postId}/comments/${cid}`, withCsrf({ method:'DELETE' }));
+            if (r.status === 204 || isSuccessish(r)) {
+                await loadComments(postId);
+            } else if (r.status === 401) {
+                alert('로그인이 필요합니다.');
+            } else if (r.status === 403) {
+                alert('삭제 권한이 없습니다.');
+            } else {
+                alert('삭제 실패');
+            }
+        });
+
+        prev.addEventListener('click', async ()=>{ const s = state.get(postId) || { page:0, size:10 }; if(s.page <= 0) return; s.page--; state.set(postId, s); await loadComments(postId); });
+        next.addEventListener('click', async ()=>{ const s = state.get(postId) || { page:0, size:10 }; s.page++; state.set(postId, s); await loadComments(postId); });
+
+        loadComments(postId);
+    }
+
+    // ===== 모집 요약 로더 =====
+    async function hydrateRecruitBox(card){
+        const recruitId = card.dataset.recruitId;
+        if(!recruitId) return;
+        const box = card.querySelector('.recruit-box');
+        if(!box) return;
+        try{
+            const res = await fetch(`/api/recruits/${recruitId}`);
+            if(!res.ok) throw new Error('detail fail');
+            const r = await res.json();
+            const status = String(r.status || '').toUpperCase();
+            const open = status === 'OPEN';
+            const fmt = (s)=>{ try{ const d=new Date(s); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}` }catch{ return '-'; } };
+
+            box.innerHTML = `
+  <div class="r-head">
+    <strong>모집 요약</strong>
+    <span class="r-badge">${open?'모집중':'마감'}</span>
+  </div>
+  <div class="r-addr">${r.address ?? '(주소 없음)'}</div>
+  <div class="r-kv">
+    <span class="chip">봉사 일시: ${r.startTime ? fmt(r.startTime) : '-'}</span>
+    ${r.capacity != null ? `<span class="chip">정원: ${r.capacity}명</span>` : ``}
+    <span class="chip">카테고리: ${r.category ?? '-'}</span>
+  </div>
+  <div class="r-acts">
+    <a class="btn" href="/map?focus=${r.id}">지도에서 보기</a>
+    <a class="btn detail" href="/recruits/${r.id}/applicants">지원자 목록 보기</a>
+    ${open ? `<button class="btn primary" data-act="apply" data-id="${r.id}">지원하기</button>` : `<button class="btn" disabled>지원불가</button>`}
+  </div>`;
+        }catch(e){
+            box.innerHTML = `<div class="muted">모집 정보를 불러오지 못했습니다.</div>`;
+            console.error(e);
+        }
+    }
+
+    // ===== 지원하기 =====
+    document.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button[data-act="apply"]');
+        if(!btn) return;
+        const id = btn.dataset.id; btn.disabled = true;
+        try{
+            let init = { method:'POST', headers:{ 'Content-Type':'application/json' } };
+            init = withCsrf(init);
+            const res = await fetch(`/api/recruits/${id}/apply`, init);
+            const data = await tryJson(res);
+            if(isSuccessish(res) && (!data || data.ok !== false)){
+                alert((data && data.message) || '지원 완료! (자동 합격)');
+                btn.textContent = '지원완료'; btn.disabled = true;
+                const card = btn.closest('.card'); card && (await hydrateRecruitBox(card));
+            } else if(res.status === 401){
+                alert((data && data.message) || '로그인이 필요합니다.'); btn.disabled = false;
+            } else if(res.status === 409){
+                alert((data && data.message) || '정원이 가득 찼거나 이미 지원했습니다.');
+                const card = btn.closest('.card'); card && (await hydrateRecruitBox(card)); btn.disabled = false;
+            } else {
+                alert((data && data.message) || `지원 처리에 실패했습니다. (HTTP ${res.status})`); btn.disabled = false;
+            }
+        }catch(err){ console.error(err); alert('네트워크 오류'); btn.disabled = false; }
+    });
+
+    // ===== 초기화 =====
+    document.querySelectorAll('.card[data-post-id]').forEach(c => bindCommentsForCard(c));
+    document.querySelectorAll('.card[data-recruit-id]').forEach(c => hydrateRecruitBox(c));
+
+    // ===== 검색(제목+내용 클라이언트 필터) =====
+    (function(){
+        const input = document.getElementById('feed-search');
+        if(!input) return;
+        const cards = () => Array.from(document.querySelectorAll('.card[data-post-id]'));
+        function norm(s){ return (s || '').toLowerCase(); }
+        input.addEventListener('input', ()=>{
+            const q = norm(input.value);
+            cards().forEach(card=>{
+                if(!q){ card.style.display=''; return; }
+                const title = norm(card.querySelector('.title')?.textContent);
+                const body  = norm(card.querySelector('.body')?.innerText);
+                const match = (title && title.includes(q)) || (body && body.includes(q));
+                card.style.display = match ? '' : 'none';
+            });
+        });
+    })();
+</script>
+</body>
+</html>

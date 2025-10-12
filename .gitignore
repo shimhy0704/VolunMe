@@ -1,0 +1,38 @@
+# Gradle
+.gradle/
+build/
+out/
+bin/
+
+# IntelliJ / Eclipse / VSCode
+*.iml
+.idea/
+.project
+.classpath
+.settings/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Uploads / local artifacts
+uploads/
+*.Zip
+*.zip
+tmp/
+*.tmp
+
+# Spring Boot / Java
+!gradle/wrapper/gradle-wrapper.jar
+target/
+
+# Local secrets (do not commit)
+.env
+*.env
+src/main/resources/application-*.properties
+!src/main/resources/application.properties

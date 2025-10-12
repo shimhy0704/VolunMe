@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8" />
+  <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <meta name="referrer" content="origin" />
+  <meta name="_csrf_header" th:content="${_csrf?.headerName}" />
+  <meta name="_csrf" th:content="${_csrf?.token}" />
+  <title>VolunMe — 지도</title>
+
+  <!-- Pretendard (Bold / SemiBold 사용) -->
+  <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
+  />
+
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --line: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #f59e0b;
+      --radius: 16px;
+      --toast-bg: rgba(17, 24, 39, 0.9);
+      /* 새 탭바 색상 변수 */
+      --tab: #f9fafb;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    html,
+    body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR,
+      sans-serif;
+      color: var(--text);
+    }
+    .app {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 68px;
+      position: relative;
+    }
+    .top {
+      padding: 12px;
+    }
+    .search {
+      position: relative;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      height: 44px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    }
+    .search input {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: 0;
+      padding: 0 14px 0 42px;
+      border-radius: 14px;
+      font-size: 15px;
+    }
+    .search .icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary);
+    }
+    #map {
+      width: 100%;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      min-height: 420px;
+      position: relative;
+      overflow: visible;
+    }
+    .ctrls {
+      position: absolute;
+      z-index: 500;
+      right: 16px;
+      top: 72px;
+      display: grid;
+      gap: 8px;
+    }
+    .fab {
+      background: #fff;
+      border: 1px solid var(--line);
+      height: 40px;
+      width: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+    }
+
+    /* ===== 기존 하단탭(.bottom/.cell)은 사용 안 함. 새로운 탭바 스타일 추가 ===== */
+    .tabbar {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: 100%;
+      max-width: 420px;
+      background: var(--tab);
+      border-top: 1px solid #eaeaea;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 13px 8px 50px;
+      gap: 6px;
+    }
+    .tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .tab.active {
+      color: #f97316;
+    }
+    .tab svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 80px;
+      transform: translateX(-50%);
+      background: var(--toast-bg);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      opacity: 0;
+      transition: 0.25s;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+    .pin {
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      position: relative;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    }
+    .pin::after {
+      content: "";
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    /* =========================
+       ===== 팝업 전용 스타일 =====
+       (지도/데이터/하단 네비게이션 변경 없음)
+       ========================= */
+    .popup {
+      position: absolute;
+      right: 16px;
+      top: 96px;
+      width: 420px;
+      max-width: calc(100% - 32px);
+      max-height: 72vh;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+      z-index: 600;
+
+      /* 요구사항: 팝업 내 모든 텍스트 Pretendard-SemiBold */
+      font-family: "Pretendard", system-ui, -apple-system, Segoe UI, Roboto,
+      "Noto Sans KR", sans-serif;
+      font-weight: 500;
+    }
+    .popup.hidden {
+      display: none;
+    }
+    .popup-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .popup-title {
+      font-weight: 600;
+      font-size: 16px;
+      margin: 0;
+    }
+    .popup-close {
+      border: 0;
+      background: #fff;
+      border: 1px solid var(--line);
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .popup-body {
+      padding: 12px 14px;
+    }
+
+    /* ▶ 상세정보를 제외한 요약을 회색 박스(#EEEEEE)로 */
+    .summary-box {
+      background: #eeeeee;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .col {
+      flex: 1;
+    }
+
+    /* 메타 텍스트 */
+    .meta p {
+      margin: 6px 0;
+      color: #374151;
+      font-size: 14px;
+    }
+    /* "봉사일시, 장소, 모집" Bold (Pretendard-Bold) */
+    .meta b {
+      font-weight: 700;
+    }
+
+    .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .tag {
+      font-size: 12px;
+      color: #6b7280;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 999px;
+      padding: 2px 8px;
+    }
+    .desc {
+      margin-top: 8px;
+      color: #374151;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .media-item {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 1 / 1;
+    }
+    .media-item img,
+    .media-item video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* 탭 버튼: 테두리 제거, 배경 #C6C6C6 작은 네모 */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .tabs .tab {
+      appearance: none;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      background: #c6c6c6;
+      color: #111827;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .tabs .tab.active {
+      filter: brightness(0.95);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+    .btn {
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #111;
+    }
+    .btn.secondary {
+      background: #fff;
+    }
+    .empty {
+      color: #9ca3af;
+      font-size: 13px;
+      padding: 10px 0;
+    }
+  </style>
+
+  <!-- Kakao Maps SDK (autoload=false 유지) -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=aabddec83fa66a4258fb57e94b4d61e1&autoload=false"></script>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="search">
+      <svg
+              class="icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <input id="q" placeholder="장소/봉사 키워드 검색(엔터)" />
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="ctrls">
+    <button class="fab" id="btnLocate" title="내 위치로" aria-label="내 위치로">
+      <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v2M12 20v2M22 12h-2M4 12H2" />
+      </svg>
+    </button>
+    <button class="fab" id="btnReset" title="인천으로 이동" aria-label="인천으로 이동">
+      <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+      >
+        <path d="m3 12 7-7 7 7" />
+        <path d="M21 21H3" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- Popup -->
+<div
+        id="popupBox"
+        class="popup hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="popupTitle"
+>
+  <div class="popup-header">
+    <h3 id="popupTitle" class="popup-title"></h3>
+    <button id="p-close" class="popup-close" aria-label="닫기">✕</button>
+  </div>
+
+  <div class="popup-body">
+    <!-- ▶ 회색 요약 박스: 상세정보 탭(내용 영역) 제외 모든 요약 정보 포함 -->
+    <div class="summary-box">
+      <div class="row">
+        <div class="col meta">
+          <p><b>봉사일시</b> <span id="p-dt"></span></p>
+          <p><b>장소</b> <span id="p-loc"></span></p>
+          <p><b>모집</b> <span id="p-count"></span></p>
+          <div id="p-tags" class="tags"></div>
+          <p id="p-desc" class="desc"></p>
+        </div>
+
+        <div class="col">
+          <div id="p-media" class="media-grid"></div>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="상세 탭">
+        <button class="tab active" data-tab="info" role="tab" aria-selected="true">
+          정보
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-panels">
+      <div id="tab-info" class="tab-panel active" role="tabpanel"></div>
+      <div id="tab-applicants" class="tab-panel" role="tabpanel"></div>
+    </div>
+
+    <div class="actions">
+      <button id="p-applyBtn" class="btn primary">신청하기</button>
+      <button id="p-cancelBtn" class="btn secondary">취소</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- 하단 탭바 (요청하신 그대로 유지) -->
+<nav class="tabbar" aria-label="하단 내비게이션">
+  <a class="tab" href="/">
+    <!-- house -->
+    <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+    >
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M9 21V9h6v12" />
+    </svg>
+    <span>홈</span>
+  </a>
+
+  <a class="tab" href="/posts">
+    <!-- menu/list -->
+    <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+    >
+      <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+    <span>피드</span>
+  </a>
+
+  <a class="tab active" href="/map">
+    <!-- map-pin -->
+    <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+    >
+      <path
+              d="M20.84 10.61c0 5.52-8.84 10.89-8.84 10.89S3.16 16.13 3.16 10.61a8.84 8.84 0 1 1 17.68 0Z"
+      />
+      <circle cx="12" cy="10.5" r="3" />
+    </svg>
+    <span>지도</span>
+  </a>
+
+  <a class="tab" href="/mypage">
+    <!-- user -->
+    <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+    >
+      <path d="M20 21a8 8 0 1 0-16 0" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+    <span>마이페이지</span>
+  </a>
+</nav>
+
+<script>
+  /* ==== 공통 ==== */
+  const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+  const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+  function withCsrf(init = {}) {
+    if (!csrfHeader || !csrfToken) return init;
+    init.headers = init.headers || {};
+    init.headers[csrfHeader] = csrfToken;
+    return init;
+  }
+  const toast = (m) => {
+    const el = document.getElementById("toast");
+    el.textContent = m;
+    el.classList.add("show");
+    clearTimeout(window.__t);
+    window.__t = setTimeout(() => el.classList.remove("show"), 1500);
+  };
+  const debounce = (fn, ms) => {
+    let t;
+    return (...a) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...a), ms);
+    };
+  };
+  const escapeHtml = (s) =>
+          String(s ?? "")
+                  .replaceAll("&", "&amp;")
+                  .replaceAll("<", "&lt;")
+                  .replaceAll(">", "&gt;")
+                  .replaceAll('"', "&quot;")
+                  .replaceAll("'", "&#39;");
+  function setDynamicMapHeight() {
+    const top = document.querySelector(".top");
+    /* ✅ .tabbar를 우선 사용하고, 없으면 .bottom으로 폴백 */
+    const bottom = document.querySelector(".tabbar") || document.querySelector(".bottom");
+    const mapEl = document.getElementById("map");
+    const h = Math.max(
+            280,
+            window.innerHeight -
+            (top?.getBoundingClientRect().height || 0) -
+            (bottom?.getBoundingClientRect().height || 0) -
+            8
+    );
+    mapEl.style.height = h + "px";
+  }
+
+  /* ==== 팝업 ==== */
+  let CURRENT_POST_ID = null;
+  function showPopup() {
+    document.getElementById("popupBox").classList.remove("hidden");
+  }
+  function hidePopup() {
+    document.getElementById("popupBox").classList.add("hidden");
+    CURRENT_POST_ID = null;
+    document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+    document.querySelector('.tab[data-tab="info"]').classList.add("active");
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    document.getElementById("tab-info").classList.add("active");
+    document.getElementById("tab-info").innerHTML = "";
+    document.getElementById("tab-applicants").innerHTML = "";
+  }
+  document.getElementById("p-close").addEventListener("click", hidePopup);
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") hidePopup();
+  });
+
+  async function loadApplicants(postId) {
+    const panel = document.getElementById("tab-applicants");
+    panel.innerHTML = '<div class="empty">불러오는 중…</div>';
+    try {
+      const r = await fetch(`/api/recruits/${postId}/applicants`);
+      if (!r.ok) {
+        if (r.status === 404 || r.status === 410) {
+          panel.innerHTML = '<div class="empty">종료된 모집글입니다.</div>';
+          return;
+        }
+        throw new Error();
+      }
+      const arr = await r.json();
+      if (!arr || !arr.length) {
+        panel.innerHTML = '<div class="empty">지원자가 아직 없습니다.</div>';
+        return;
+      }
+      panel.innerHTML = arr
+              .map(
+                      (a) =>
+                              `<div class="row" style="gap:8px;padding:6px 0;border-bottom:1px solid #eee"><div style="font-weight:600">${escapeHtml(a.nickname ?? "유저#" + a.userId)}</div><div style="color:#6b7280;font-size:12px">${escapeHtml(a.status ?? "")}</div></div>`
+              )
+              .join("");
+    } catch {
+      panel.innerHTML = '<div class="empty">지원자 정보를 불러오지 못했습니다.</div>';
+    }
+  }
+
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      const key = btn.dataset.tab;
+      const panel = document.getElementById(`tab-${key}`);
+      panel.classList.add("active");
+      if (key === "applicants" && CURRENT_POST_ID) await loadApplicants(CURRENT_POST_ID);
+    });
+  });
+
+  document.getElementById("p-applyBtn").addEventListener("click", async () => {
+    if (!CURRENT_POST_ID) return;
+    try {
+      const r = await fetch(
+              `/api/recruits/${CURRENT_POST_ID}/apply`,
+              withCsrf({ method: "POST" })
+      );
+      let d = null;
+      try {
+        d = await r.json();
+      } catch {}
+      const ok = r.status >= 200 && r.status < 400 && (!d || d.ok !== false);
+      if (ok) toast(d?.message || "지원 완료!");
+      else if (r.status === 404 || r.status === 410) toast("종료된 모집글입니다.");
+      else toast(d?.message || `지원 실패 (HTTP ${r.status})`);
+    } catch {
+      toast("네트워크 오류");
+    }
+  });
+  document.getElementById("p-cancelBtn").addEventListener("click", hidePopup);
+
+  async function openRecruitPopup(id) {
+    const brief = BRIEF_CACHE.get(id);
+
+    const hydrate = (data) => {
+      CURRENT_POST_ID = data.postId ?? data.id ?? id;
+      document.getElementById("popupTitle").textContent =
+              data.title || brief?.title || "제목 없음";
+      // ✅ 주최자 관련 UI/로직 완전 제거
+
+      const dateStr = [data.date ?? data.startDate ?? "", data.time ?? data.startTime ?? ""]
+              .filter(Boolean)
+              .join(" ");
+      document.getElementById("p-dt").textContent = dateStr || "";
+      document.getElementById("p-loc").textContent =
+              data.location ?? data.address ?? brief?.address ?? "";
+      const applied = data.appliedCount ?? data.applied ?? brief?.appliedCount ?? 0;
+      const cap = data.capacity ?? brief?.capacity ?? 0;
+      document.getElementById("p-count").textContent = `${applied} / ${cap}`;
+
+      const $tags = document.getElementById("p-tags");
+      $tags.innerHTML = "";
+      (data.tags || brief?.tags || []).forEach((t) => {
+        const s = document.createElement("span");
+        s.className = "tag";
+        s.textContent = t;
+        $tags.appendChild(s);
+      });
+      document.getElementById("p-desc").textContent = data.shortDesc ?? data.description ?? "";
+
+      const $media = document.getElementById("p-media");
+      $media.innerHTML = "";
+      (data.media || []).forEach((m) => {
+        const w = document.createElement("div");
+        w.className = "media-item";
+        if ((m.type || "").startsWith("video")) {
+          const v = document.createElement("video");
+          v.src = m.url;
+          v.controls = true;
+          w.appendChild(v);
+        } else {
+          const i = document.createElement("img");
+          i.src = m.url;
+          w.appendChild(i);
+        }
+        $media.appendChild(w);
+      });
+
+      const b = document.getElementById("p-applyBtn");
+      if (typeof data.canApply === "boolean") {
+        b.disabled = !data.canApply;
+        b.textContent = data.canApply ? "신청하기" : "신청 불가";
+      } else {
+        b.disabled = false;
+        b.textContent = "신청하기";
+      }
+
+      showPopup();
+    };
+
+    // 1순위: 팝업용 경량 API
+    try {
+      const r1 = await fetch(`/api/recruits/${id}/popup`);
+      if (r1.ok) {
+        return hydrate(await r1.json());
+      }
+      if (r1.status === 404 || r1.status === 410) throw new Error("gone");
+    } catch {}
+
+    // 2순위: 상세 API
+    try {
+      const r2 = await fetch(`/api/recruits/${id}`);
+      if (r2.ok) {
+        const d = await r2.json();
+        return hydrate({
+          id: d.id ?? d.postId ?? id,
+          title: d.title,
+          date: d.date ?? d.startDate ?? "",
+          time: d.time ?? d.startTime ?? "",
+          address: d.address ?? d.location ?? "",
+          capacity: d.capacity ?? 0,
+          appliedCount: d.appliedCount ?? d.applied ?? 0,
+          shortDesc: d.shortDesc ?? d.description ?? "",
+          tags: d.tags ?? [],
+          media: (d.media ?? []).map((x) => ({ url: x.url ?? x.src, type: x.type ?? "" })),
+          canApply: typeof d.canApply === "boolean" ? d.canApply : true,
+        });
+      }
+    } catch {}
+
+    // 3순위: 마커 브리프 캐시
+    if (brief) {
+      return hydrate({
+        id,
+        title: brief.title,
+        address: brief.address,
+        capacity: brief.capacity,
+        appliedCount: brief.appliedCount,
+        tags: brief.tags || [],
+        media: [],
+      });
+    }
+
+    toast("해당 모집글은 종료되었거나 삭제되었어요");
+  }
+
+  /* ==== 지도/핀 ==== */
+  let map;
+  const OVERLAYS = new Map(); // id -> CustomOverlay
+  const BRIEF_CACHE = new Map(); // id -> brief
+
+  function createPinOverlay(brief) {
+    const el = document.createElement("div");
+    el.className = "pin";
+    el.title = brief.title || "상세 보기";
+    el.style.cursor = "pointer";
+    el.addEventListener("click", () => openRecruitPopup(brief.id));
+    const yAnchor = 1; // 꼬리 하단 기준
+    return new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(brief.lat, brief.lng),
+      content: el,
+      yAnchor: yAnchor,
+    });
+  }
+
+  function getBBox() {
+    const b = map.getBounds(),
+            sw = b.getSouthWest(),
+            ne = b.getNorthEast();
+    return { south: sw.getLat(), west: sw.getLng(), north: ne.getLat(), east: ne.getLng() };
+  }
+
+  function normalizeFromMarkersApi(arr) {
+    // /api/recruits/markers → [{id,title,lat,lng,status,category}, ...]
+    return (arr || [])
+            .map((x) => ({
+              id: x.id,
+              title: x.title ?? "(제목 없음)",
+              lat: typeof x.lat === "string" ? parseFloat(x.lat) : x.lat,
+              lng: typeof x.lng === "string" ? parseFloat(x.lng) : x.lng,
+              address: x.address ?? "",
+              category: x.category ?? "",
+              capacity: x.capacity ?? null,
+              appliedCount: x.appliedCount ?? null,
+              status: String(x.status || "").toUpperCase(),
+              tags: x.tags ?? [],
+            }))
+            .filter((b) => b.id != null && isFinite(b.lat) && isFinite(b.lng));
+  }
+
+  async function fetchBriefsByBBox() {
+    const qVal = document.getElementById("q")?.value?.trim() || "";
+    const b = getBBox();
+    const qs = new URLSearchParams({
+      south: b.south,
+      west: b.west,
+      north: b.north,
+      east: b.east,
+    });
+    if (qVal) qs.set("q", qVal);
+
+    try {
+      const r = await fetch(`/api/recruits/markers?${qs.toString()}`);
+      if (r.ok) {
+        const j = await r.json();
+        return normalizeFromMarkersApi(Array.isArray(j) ? j : []);
+      }
+    } catch (e) {
+      console.warn("[markers bbox] error", e);
+    }
+    return [];
+  }
+
+  function pruneOverlaysOutside(bbox, marginDeg = 0.2) {
+    const south = bbox.south - marginDeg,
+            west = bbox.west - marginDeg,
+            north = bbox.north + marginDeg,
+            east = bbox.east + marginDeg;
+    for (const [id, ov] of OVERLAYS.entries()) {
+      const p = ov.getPosition(),
+              lat = p.getLat(),
+              lng = p.getLng();
+      if (lat < south || lat > north || lng < west || lng > east) {
+        ov.setMap(null);
+        OVERLAYS.delete(id);
+      }
+    }
+  }
+
+  const reloadPins = debounce(async () => {
+    const b = getBBox();
+    pruneOverlaysOutside(b);
+    const briefs = await fetchBriefsByBBox();
+    if (!briefs.length) return;
+    for (const br of briefs) {
+      BRIEF_CACHE.set(br.id, br);
+      if (OVERLAYS.has(br.id)) continue;
+      const ov = createPinOverlay(br);
+      ov.setMap(map);
+      OVERLAYS.set(br.id, ov);
+    }
+  }, 250);
+
+  function initMap() {
+    setDynamicMapHeight();
+    const el = document.getElementById("map");
+    const centerICN = { lat: 37.456, lng: 126.705 }; // 인천
+    map = new kakao.maps.Map(el, {
+      center: new kakao.maps.LatLng(centerICN.lat, centerICN.lng),
+      level: 6,
+    });
+    setTimeout(() => {
+      map.relayout();
+      map.setCenter(new kakao.maps.LatLng(centerICN.lat, centerICN.lng));
+      reloadPins();
+    }, 0);
+    kakao.maps.event.addListener(map, "idle", reloadPins);
+
+    document.getElementById("btnReset").addEventListener("click", () => {
+      const c = new kakao.maps.LatLng(centerICN.lat, centerICN.lng);
+      map.setLevel(6);
+      map.setCenter(c);
+      map.relayout();
+    });
+    document.getElementById("btnLocate").addEventListener("click", () => {
+      if (!navigator.geolocation) return toast("브라우저가 위치를 지원하지 않아요");
+      navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const c = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+                map.setLevel(5);
+                map.setCenter(c);
+                map.relayout();
+                const me = new kakao.maps.Marker({ position: c, map, title: "내 위치" });
+                setTimeout(() => me.setMap(null), 5000);
+              },
+              () => toast("위치 접근이 거부되었어요")
+      );
+    });
+
+    const qInput = document.getElementById("q");
+    qInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        reloadPins();
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setDynamicMapHeight();
+    window.addEventListener("resize", () => {
+      setDynamicMapHeight();
+      if (map) map.relayout();
+    });
+    if (typeof kakao === "undefined" || !kakao.maps) {
+      alert("카카오 지도 SDK 로드 실패 (앱키/도메인 확인)");
+      return;
+    }
+    kakao.maps.load(initMap);
+  });
+</script>
+</body>
+</html>

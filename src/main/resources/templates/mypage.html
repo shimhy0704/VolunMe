@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>VolunMe - 마이페이지</title>
+
+    <!-- Pretendard CDN (정적 가중치) -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+
+    <style>
+        :root{
+            --bg:#f4f5f7;--card:#fff;--text:#222;--sub:#6b7280;--brand:#ff9f50;--line:#e5e7eb;
+            /* home.html의 탭바 컬러 토큰 */
+            --tab:#f9fafb; --accent:#fb923c;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        /* ▼ 폰트: Pretendard + 기본 가중치 Medium(500) */
+        body{
+            margin:0;background:var(--bg);
+            font-family: Pretendard, system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;
+            font-weight: 500; /* Medium */
+            color:var(--text)
+        }
+        .wrap{max-width:420px;margin:0 auto;padding:12px 12px 160px;min-height:100dvh;position:relative}
+        .card{background:var(--card);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:14px}
+        .row{display:flex;align-items:center}
+        .between{justify-content:space-between}
+        .gap8{gap:8px}.gap12{gap:12px}
+
+        .avatar-wrap{position:relative;width:64px;aspect-ratio:1/1}
+        .avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:center;border:1px solid var(--line);image-rendering:auto;display:block;-webkit-mask-image:-webkit-radial-gradient(white, black)}
+        .swapbtn{position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+        /* Lucide repeat 아이콘 크기만(원 크기 유지) */
+        .swapbtn svg{width:18px;height:18px}
+
+        .ratio-16x9{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden}
+        .media-grid{display:grid;gap:6px;margin:8px 0}
+        .grid-1{grid-template-columns:1fr}
+        .grid-2{grid-template-columns:1fr 1fr}
+        .grid-3{grid-template-columns:1fr 1fr}
+        .grid-3 .media-item:nth-child(1){grid-column:1 / -1;aspect-ratio:16/9}
+        .media-item{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+        .media-item img,.media-item video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+
+        /* ▼ 굵은 글씨는 Bold(700) */
+        h2{margin:0 0 2px;font-size:18px;font-weight:700}
+        .post h3{margin:0 0 6px;font-size:14px;font-weight:700}
+        .meta .box > div:first-child{font-weight:700}
+
+        .sub{color:var(--sub);font-size:12px}
+        .email{margin:0;color:var(--sub);font-size:12px}
+        .btn{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;cursor:pointer;text-decoration:none;color:inherit}
+        /* ▼ 아바타 보기 버튼 전용 색상 */
+        .btn.orange{background:#F97316;color:#fff;border:none}
+        .btn.brand{background:var(--brand);color:#fff;border:none}
+        .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+        .meta .box{background:#fafafa;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center;font-size:12px}
+        .status{margin-top:6px;font-size:13px;color:#444;font-style:italic;white-space:pre-wrap}
+        .section{margin-top:12px}
+        .post{padding:12px;border-top:1px solid var(--line)}
+        .post p{margin:0 0 8px;color:#444;font-size:13px}
+        .post-link{display:block;text-decoration:none;color:inherit}
+
+        /* '수정' 버튼: 가변 너비 + 한 줄 유지 */
+        .dotbtn{
+            height:36px; padding:0 10px; width:auto; min-width:46px;
+            border-radius:10px;border:1px solid var(--line);
+            display:inline-flex;align-items:center;justify-content:center;
+            cursor:pointer;background:#fff; white-space:nowrap;
+            font-weight:500; /* Medium */
+        }
+
+        .kbar{display:flex;align-items:center;gap:6px;color:#111;margin:6px 0 10px}
+        .kbar .time{margin-left:auto}
+        .tag{font-size:11px;color:#ff7a00;border:1px solid #ffd0a8;background:#fff7f0;border-radius:6px}
+        .empty{color:var(--sub);font-size:13px;padding:8px 2px}
+        .post-meta{display:flex;gap:6px;align-items:center;color:#6b7280;font-size:12px}
+        .divider-dot{opacity:.6}
+
+        /* ===== 하단 탭바 (home.html 동일, 폰트는 그대로 시스템 폰트) ===== */
+        .tabbar{
+            position:fixed; left:50%; transform:translateX(-50%);
+            bottom:0; width:100%; max-width:420px; background:var(--tab);
+            border-top:1px solid #eaeaea; display:grid; grid-template-columns:repeat(4,1fr);
+            padding:13px 8px 50px; gap:6px;
+        }
+        .tab{ display:flex; flex-direction:column; align-items:center; gap:8px;
+            text-decoration:none; color:#6b7280; font-size:12px;
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans KR",sans-serif !important;
+            font-weight: 400 !important; /* 탭바는 변경하지 않음 */
+        }
+        .tab.active{ color:#f97316 }
+        .tab svg{ width:26px; height:26px }
+    </style>
+</head>
+<body>
+
+<!-- 부트 값 -->
+<div id="boot" style="display:none;">
+    <span id="b-isOwner" th:text="${isOwner}">false</span>
+    <span id="b-userId" th:text="${userId}">0</span>
+    <span id="b-nickname" th:text="${nickname}">사용자</span>
+    <span id="b-email" th:text="${email}">email@example.com</span>
+    <span id="b-status" th:text="${statusMessage}"></span>
+    <span id="b-kakao" th:text="${kakaoProfileUrl}">/img/ronaldo.png</span>
+    <span id="b-bear" th:text="${bearAvatarUrl}">/img/bearhead.png</span>
+</div>
+
+<div class="wrap">
+
+    <!-- 프로필 카드 -->
+    <div class="card">
+        <div class="row between gap12">
+            <div class="row gap12">
+                <div class="avatar-wrap">
+                    <img id="avatarImg" class="avatar" th:src="${kakaoProfileUrl}" alt="avatar" referrerpolicy="no-referrer"
+                         onerror="this.onerror=null;this.src='/img/bearhead.png';">
+                    <button id="swapBtn" class="swapbtn" title="아바타 전환">
+                        <!-- Lucide: repeat -->
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="17 1 21 5 17 9"></polyline>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                            <polyline points="7 23 3 19 7 15"></polyline>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div>
+                    <h2 id="nickname" th:text="${nickname}">사용자</h2>
+                    <div id="statusMessage" class="status" th:text="${statusMessage}">상태메세지…</div>
+                </div>
+            </div>
+
+            <div class="row gap8">
+                <!-- 아바타 보기 버튼: #F97316 -->
+                <a id="avatarViewLink"
+                   class="btn orange"
+                   th:href="${isOwner} ? @{/main} : @{/main(userId=${userId})}">
+                    아바타 보기
+                </a>
+
+                <!-- … 대신 '수정' -->
+                <button id="moreBtn" class="dotbtn" title="상태메세지 수정">수정</button>
+            </div>
+        </div>
+
+        <div class="meta"
+             th:with="
+       total    = (${recruitCount} ?: (${totalCount} ?: (${postCount} ?: (${allCount} ?: 0)))),
+       recruits = (${reviewCount} ?: 0),
+       reviews0 = ${total} - ${recruits},
+       reviews  = ${reviews0} > 0 ? ${reviews0} : 0
+     ">
+            <div class="box">
+                <!-- 모집 = 실제 모집글 수 -->
+                <div th:text="${recruits}">0</div>
+                <div class="sub">모집</div>
+            </div>
+            <div class="box">
+                <!-- 후기 = 전체 - 모집 -->
+                <div th:text="${reviews}">0</div>
+                <div class="sub">후기</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 내 게시글 -->
+    <div class="card section">
+        <div class="row between">
+            <h2>내 게시글</h2>
+            <span class="sub" th:text="${#lists.size(myRecruits)} + '개'">0개</span>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(myRecruits)}">올린 모집이 아직 없어요 🐻</div>
+
+        <div th:if="${!#lists.isEmpty(myRecruits)}">
+            <div class="post" th:each="r : ${myRecruits}" th:attr="data-recruit-id=${r.id}">
+                <a class="post-link">
+                    <h3 th:text="${r.title}">모집 제목</h3>
+                    <p class="body" th:text="${#strings.abbreviate(r.description ?: '', 140)}">내용 미리보기</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- 하단 탭바 (home.html과 동일) -->
+<nav class="tabbar" aria-label="하단 내비게이션">
+    <a class="tab" th:href="@{/}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10.5 12 3l9 7.5"/>
+            <path d="M9 21V9h6v12"/>
+        </svg>
+        <span>홈</span>
+    </a>
+
+    <a class="tab" th:href="@{/posts}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h10"/>
+        </svg>
+        <span>피드</span>
+    </a>
+
+    <a class="tab" th:href="@{/map}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.84 10.61c0 5.52-8.84 10.89-8.84 10.89S3.16 16.13 3.16 10.61a8.84 8.84 0 1 1 17.68 0Z"/>
+            <circle cx="12" cy="10.5" r="3"/>
+        </svg>
+        <span>지도</span>
+    </a>
+
+    <a class="tab active" th:href="@{/mypage}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21a8 8 0 1 0-16 0"/>
+            <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>마이페이지</span>
+    </a>
+</nav>
+
+<script>
+    (function(){
+        const txt = id => (document.getElementById(id)?.textContent || '').trim();
+        const BOOT = {
+            isOwner: txt('b-isOwner') === 'true',
+            userId: Number(txt('b-userId') || '0'),
+            nickname: txt('b-nickname'),
+            email: txt('b-email'),
+            statusMessage: txt('b-status'),
+            kakaoProfileUrl: txt('b-kakao') || '/img/ronaldo.png',
+            bearAvatarUrl: txt('b-bear') || '/img/avatar-default.png'
+        };
+
+        const $avatar  = document.getElementById('avatarImg');
+        const $swapBtn = document.getElementById('swapBtn');
+        const $moreBtn = document.getElementById('moreBtn');
+        const $status  = document.getElementById('statusMessage');
+        let avatarType = 'kakao';
+
+        function setAvatar(type){
+            const url = (type==='kakao') ? BOOT.kakaoProfileUrl : BOOT.bearAvatarUrl;
+            if(!$avatar || !url) return;
+
+            const onLoad = ()=> {
+                $avatar.removeEventListener('load', onLoad);
+                $avatar.removeEventListener('error', onError);
+                avatarType = type;
+            };
+            const onError = ()=> {
+                $avatar.removeEventListener('load', onLoad);
+                $avatar.removeEventListener('error', onError);
+                if(type==='kakao' && BOOT.bearAvatarUrl){
+                    $avatar.src = BOOT.bearAvatarUrl;
+                    avatarType = 'bear';
+                }
+            };
+            $avatar.addEventListener('load', onLoad);
+            $avatar.addEventListener('error', onError);
+            if($avatar.src !== url) $avatar.src = url;
+        }
+        setAvatar('kakao');
+
+        $moreBtn?.addEventListener('click', async ()=>{
+            if(!BOOT.isOwner) return;
+            const current = $status?.textContent || '';
+            const next = prompt('상태메세지를 입력하세요', current);
+            if(next === null) return;
+
+            const value = next.trim();
+            try {
+                const res = await fetch(`/api/mypage/${BOOT.userId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ statusMessage: value })
+                });
+                const data = await res.json().catch(()=>null);
+
+                if(!res.ok){
+                    alert((data && data.message) || '저장에 실패했습니다.');
+                    return;
+                }
+                if($status) $status.textContent = (data && data.statusMessage) || value;
+                BOOT.statusMessage = (data && data.statusMessage) || value;
+            } catch(e){
+                console.error(e);
+                alert('네트워크 오류로 저장에 실패했습니다.');
+            }
+        });
+
+        $swapBtn?.addEventListener('click', ()=> setAvatar(avatarType==='kakao' ? 'bear' : 'kakao'));
+
+        function extractMediaUrlsFromText(text){
+            if(!text) return [];
+            const re = /(https?:\/\/[^\s"'()<>]+\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))(?:\?[^\s"'()<>]*)?/ig;
+            const out = [];
+            let m;
+            while((m = re.exec(text)) && out.length < 12){ out.push(m[1]); }
+            return out;
+        }
+
+        function isVideo(url){ return /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(url); }
+
+        function normalize(u){
+            if(!u) return '';
+            const t = u.trim();
+            if(!t) return '';
+            if(t.startsWith('http://') || t.startsWith('https://') || t.startsWith('/')) return t;
+            return '/' + t;
+        }
+
+        function renderMedia(gridEl, items){
+            if(!gridEl || !items || !items.length) return;
+
+            const n = items.length;
+            if(n === 1) gridEl.classList.add('grid-1');
+            else if(n === 2) gridEl.classList.add('grid-2');
+            else gridEl.classList.add('grid-3');
+
+            items.forEach((it)=>{
+                const url = normalize(typeof it === 'string' ? it : it.url);
+                if(!url) return;
+
+                const wrap = document.createElement('div');
+                wrap.className = 'media-item';
+
+                const onErr = (type) => {
+                    console.warn('[mypage] media load error:', { type, url });
+                    wrap.style.display='none';
+                };
+
+                const t = (typeof it === 'object' && it?.type) ? it.type : (isVideo(url) ? 'video' : 'image');
+
+                if(t === 'video'){
+                    const v = document.createElement('video');
+                    v.src = url;
+                    v.playsInline = true;
+                    v.controls = true;
+                    v.preload = 'metadata';
+                    v.crossOrigin = 'anonymous';
+                    v.onerror = ()=> onErr('video');
+                    wrap.appendChild(v);
+                }else{
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.loading = 'lazy';
+                    img.referrerPolicy = 'no-referrer';
+                    img.crossOrigin = 'anonymous';
+                    img.onerror = ()=> onErr('image');
+                    wrap.appendChild(img);
+                }
+                gridEl.appendChild(wrap);
+            });
+
+            const fallback = gridEl.parentElement?.querySelector('.fallback-summary');
+            if(fallback) fallback.style.display = 'none';
+        }
+
+        function parseDataMedia(raw){
+            if(!raw) return [];
+            const s = String(raw).trim();
+            if(!s) return [];
+
+            if(s.startsWith('[')){
+                try {
+                    const arr = JSON.parse(s);
+                    if(Array.isArray(arr)) return arr;
+                } catch(e){ }
+            }
+            return s.split(',').map(x => x.trim()).filter(Boolean);
+        }
+
+        document.querySelectorAll('.media-grid[data-media]').forEach(el=>{
+            const raw = el.getAttribute('data-media') || '';
+            const items = parseDataMedia(raw);
+            if(items.length) {
+                renderMedia(el, items);
+                return;
+            }
+            const rawText = el.parentElement?.querySelector('.fallback-summary')?.textContent || '';
+            const urls = extractMediaUrlsFromText(rawText);
+            renderMedia(el, urls);
+        });
+
+        document.querySelectorAll('.media-grid[data-raw]').forEach(el=>{
+            if(el.getAttribute('data-media')) return;
+            const raw = el.getAttribute('data-raw') || '';
+            const urls = extractMediaUrlsFromText(raw);
+            renderMedia(el, urls);
+        });
+    })();
+</script>
+
+</body>
+</html>

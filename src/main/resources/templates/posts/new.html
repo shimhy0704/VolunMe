@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>후기 작성</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="origin">
+
+    <!-- CSRF (스프링 시큐리티) -->
+    <meta name="_csrf_header" th:content="${_csrf?.headerName}" />
+    <meta name="_csrf"        th:content="${_csrf?.token}" />
+
+    <!-- Pretendard (SemiBold) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+
+    <style>
+        :root{
+            color-scheme: light;
+            --bg:#F6F7F9;
+            --card:#FFFFFF;
+            --text:#1F2329;
+            --muted:#8B95A1;
+            --line:#E5E8EB;
+            --accent:#FF8A00;
+            --accent-press:#E97700;
+            --field:#F9FAFB;
+            --shadow:0 6px 22px rgba(15,23,42,.06);
+            --radius:16px;
+        }
+
+        html,body{height:100%}
+        body{
+            margin:0;
+            padding:24px;
+            background:var(--bg);
+            color:var(--text);
+            font-family:"Pretendard",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+            font-weight:600; /* SemiBold */
+            line-height:1.55;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+        }
+
+        /* 상단 탭 */
+        .tabs-wrap{
+            max-width:780px;
+            margin:0 auto 14px;
+            display:flex;
+            gap:14px;
+            align-items:center;
+        }
+        .tab-pill{
+            flex:0 0 150px;
+            height:44px;
+            border-radius:12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:16px;
+            box-shadow:var(--shadow);
+            user-select:none;
+            text-decoration: none;
+        }
+        .tab-pill.is-active{ background:var(--accent); color:#fff; }
+        .tab-pill.is-inactive{ background:#D9D9D9; color:#333; }
+
+        /* 카드형 폼 */
+        form{
+            max-width:780px;
+            margin:0 auto;
+            background:var(--card);
+            border:1px solid var(--line);
+            border-radius:var(--radius);
+            box-shadow:var(--shadow);
+            padding:22px;
+        }
+
+        .field{ margin:16px 0; }
+        label{ display:block; margin:0 0 8px; font-size:14px; }
+
+        input[type="text"], textarea{
+            width:100%;
+            padding:14px 14px;
+            border-radius:14px;
+            border:1px solid var(--line);
+            background:var(--field);
+            box-sizing:border-box;
+            font-size:15px;
+            outline:none;
+            transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+        }
+        textarea{ resize:vertical; min-height:160px; }
+        input::placeholder, textarea::placeholder{ color:#B0B8C1; font-weight:600; }
+        input:focus, textarea:focus{
+            border-color:var(--accent);
+            background:#fff;
+            box-shadow:0 0 0 4px rgba(255,138,0,.12);
+        }
+
+        /* 액션 버튼 (오른쪽 정렬, 작게) */
+        .actions{
+            margin-top:12px;
+            display:flex;
+            gap:8px;
+            justify-content:flex-end;
+        }
+        .btn{
+            padding:8px 14px;
+            border-radius:12px;
+            border:0;
+            font-size:14px;
+            cursor:pointer;
+        }
+        .btn-primary{
+            background:var(--accent);
+            color:#fff;
+            box-shadow:0 8px 18px rgba(255,138,0,.25);
+            transition:background .15s ease, transform .06s ease;
+        }
+        .btn-primary:hover{ background:var(--accent-press); }
+        .btn-primary:active{ transform:translateY(1px); }
+        .btn-ghost{
+            background:#D9D9D9;
+            color:#333;
+        }
+
+        @media (max-width:640px){
+            body{ padding:18px; }
+            form{ padding:18px; }
+            .tab-pill{ flex:1 1 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 상단 탭: 후기 활성(주황), 모집 비활성(회색) -->
+<div class="tabs-wrap">
+    <a th:href="@{/recruits/new}" class="tab-pill is-inactive">모집</a>
+    <div class="tab-pill is-active">후기</div>
+</div>
+
+<!-- 후기 작성 폼: 제목/내용/버튼만 -->
+<form id="reviewForm" th:action="@{/api/recruits/reviews}" method="post">
+    <!-- CSRF: 폼 제출 시 함께 전송 -->
+    <input type="hidden" th:name="${_csrf?.parameterName}" th:value="${_csrf?.token}" />
+
+    <!-- 백엔드에 필요한 파라미터 (UI 변화 없음) -->
+    <input type="hidden" name="review" value="true" />
+    <input type="hidden" name="startTime" id="startTimeHidden" />
+
+    <div class="field">
+        <label for="title">제목</label>
+        <input id="title" name="title" type="text" placeholder="제목을 입력하세요" required />
+    </div>
+
+    <div class="field">
+        <label for="description">내용</label>
+        <textarea id="description" name="description" placeholder="후기 내용을 입력하세요" required></textarea>
+    </div>
+
+    <div class="actions">
+        <button type="submit" class="btn btn-primary" id="submitBtn">작성하기</button>
+        <button type="button" class="btn btn-ghost" id="cancelBtn">취소</button>
+    </div>
+</form>
+
+<!-- JS: 제출 시 startTime=현재, 성공하면 /posts로 이동 -->
+<script th:inline="javascript">
+    (function(){
+        const form = document.getElementById('reviewForm');
+        const startHidden = document.getElementById('startTimeHidden');
+        const cancelBtn = document.getElementById('cancelBtn');
+
+        // yyyy-MM-dd'T'HH:mm (분 단위) 로컬시간 문자열
+        function toLocalMinute(d){
+            const pad = n => String(n).padStart(2,'0');
+            return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())
+                +'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+        }
+
+        // 최초 진입 시 현재 시각으로 기본 세팅
+        startHidden.value = toLocalMinute(new Date());
+
+        // 취소: 뒤로가기(필요시 경로로 변경 가능)
+        cancelBtn.addEventListener('click', () => {
+            if (document.referrer) history.back();
+            else location.href = /*[[ @{/posts} ]]*/ '/posts';
+        });
+
+        form.addEventListener('submit', async (e) => {
+            // 제출 직전에 다시 현재 시각으로 보정
+            startHidden.value = toLocalMinute(new Date());
+
+            // JS 비활성/오류 대비 기본 제출을 폴백으로 두기 위해 preventDefault 전에 시도
+            e.preventDefault();
+
+            try {
+                const fd = new FormData(form); // CSRF 히든 필드 포함됨
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'include'
+                });
+
+                // 서버가 { ok:true } 또는 { id:... } 형태 JSON을 주는 것을 기대
+                let data = {};
+                try { data = await res.json(); } catch(_) {}
+
+                if (res.ok && (data.ok === true || data.id)) {
+                    location.href = /*[[ @{/posts} ]]*/ '/posts';
+                } else {
+                    // 서버가 리다이렉트/HTML을 줄 수도 있으니, 실패로 판단 시 폴백 제출
+                    form.submit();
+                }
+            } catch (err) {
+                // 네트워크/JS 오류 시 폴백으로 일반 폼 제출
+                form.submit();
+            }
+        });
+    })();
+</script>
+
+</body>
+</html>

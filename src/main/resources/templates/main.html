@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>VolunMe — 홈</title>
+
+    <style>
+        :root{
+            --bg:#f3f4f6; --bar:#f59e0b; --track:#e5e7eb; --text:#111827;
+            --muted:#6b7280; --tab:#f9fafb; --accent:#fb923c;
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;background:var(--bg);color:var(--text);
+            font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans KR",sans-serif;
+        }
+        .screen{
+            max-width:420px;margin:0 auto;padding:16px 16px 160px;min-height:100dvh;position:relative;
+        }
+
+        /* ===== EXP 영역 ===== */
+        .exp{ margin-top:6px; }
+        .exp .lv{
+            font-weight:700;font-size:14px;color:#f97316;
+            margin:0 0 6px 27px; /* Lv 텍스트를 우측으로 살짝 이동 */
+            line-height:1;
+        }
+        .exp-row{ display:flex;align-items:center;gap:4px; }
+        .bear-chip{ width:80px;height:80px;display:flex;align-items:center;justify-content:center;background:transparent; }
+        .bear-chip img{ width:100%;height:100%;object-fit:contain; }
+        .meter{ position:relative;height:40px;background:var(--track);border-radius:999px;overflow:hidden;flex:1;margin-left:-10px; }
+        .fill{ position:absolute;inset:0;width:0%;background:var(--bar);border-radius:999px;transition:width .35s ease; }
+        .exp-bottom{
+            margin-top:6px;font-size:12px;color:var(--muted);
+            padding-left:22px; /* 숫자 정렬 보정 */
+            line-height:1;
+        }
+        .exp-bottom .now{ color:#f97316;margin-right:2px }
+        .exp-bottom .total{ opacity:.7 }
+
+        /* ===== 곰돌이 히어로 ===== */
+        .hero{ display:flex;justify-content:center;margin:140px 0 12px }
+        .hero img{ width:min(300px,90%);height:auto;display:block; }
+
+        /* ===== 플로팅 버튼 ===== */
+        .fab{
+            position:fixed;right:calc(50% - 420px/2 + 18px);bottom:140px;
+            width:80px;height:80px;border-radius:50%;background:var(--accent);
+            display:grid;place-items:center;color:#fff;text-decoration:none;border:none;
+        }
+        @media (max-width:440px){ .fab{ right:18px } }
+        .ico{ width:36px;height:36px;display:block }
+
+        /* ===== 하단 탭바 ===== */
+        .tabbar{
+            position:fixed;left:50%;transform:translateX(-50%);
+            bottom:0;width:100%;max-width:420px;background:var(--tab);
+            border-top:1px solid #eaeaea;display:grid;grid-template-columns:repeat(4,1fr);
+            padding:13px 8px 50px;gap:6px;
+        }
+        .tab{ display:flex;flex-direction:column;align-items:center;gap:8px;
+            text-decoration:none;color:#6b7280;font-size:12px }
+        .tab.active{ color:#f97316 }
+        .tab svg{ width:26px;height:26px }
+    </style>
+</head>
+<body>
+<main class="screen">
+
+    <!-- EXP -->
+    <section class="exp" aria-label="경험치">
+        <div class="lv" th:text="${'Lv.' + (level != null ? level : 1)}">Lv.1</div>
+
+        <div class="exp-row">
+            <div class="bear-chip" aria-hidden="true">
+                <!-- profileUrl 없으면 기본 아이콘 -->
+                <img th:src="${#strings.isEmpty(profileUrl) ? '/img/bearhead.png' : profileUrl}" alt="프로필 아바타">
+            </div>
+
+            <div class="meter"
+                 role="progressbar"
+                 th:attr="aria-valuemin=0,
+                    aria-valuemax=${expToLevel != null ? expToLevel : 100},
+                    aria-valuenow=${exp != null ? exp : 0}">
+                <div class="fill" th:style="|width:${percent != null ? percent : 0}%|"></div>
+            </div>
+        </div>
+
+        <div class="exp-bottom">
+            <span class="now"   th:text="${exp != null ? exp : 0}">0</span>
+            <span class="sep" th:if="${expToLevel != null}"> / </span>
+            <span class="total" th:text="${expToLevel != null ? expToLevel : 0}">0</span>
+        </div>
+    </section>
+
+    <!-- 곰돌이 일러스트 (레벨별 이미지) -->
+    <section class="hero" aria-label="마스코트">
+        <img th:src="${#strings.isEmpty(bearImg) ? '/img/bear6.png' : bearImg}"
+             alt="곰돌이 일러스트" width="120" height="120" loading="lazy" decoding="async">
+    </section>
+
+    <!-- 모집글 작성 버튼 -->
+    <a class="fab" th:href="@{/recruits/new}" aria-label="모집글 작성" title="모집글 작성">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+            <path d="m15 5 3 3"/>
+        </svg>
+    </a>
+
+</main>
+
+<!-- 하단 탭바 -->
+<nav class="tabbar" aria-label="하단 내비게이션">
+    <a class="tab active" th:href="@{/main}">
+        <!-- house -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10.5 12 3l9 7.5"/>
+            <path d="M9 21V9h6v12"/>
+        </svg>
+        <span>홈</span>
+    </a>
+
+    <a class="tab" th:href="@{/posts}">
+        <!-- menu/list -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h10"/>
+        </svg>
+        <span>피드</span>
+    </a>
+
+    <a class="tab" th:href="@{/map}">
+        <!-- map-pin -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.84 10.61c0 5.52-8.84 10.89-8.84 10.89S3.16 16.13 3.16 10.61a8.84 8.84 0 1 1 17.68 0Z"/>
+            <circle cx="12" cy="10.5" r="3"/>
+        </svg>
+        <span>지도</span>
+    </a>
+
+    <a class="tab" th:href="@{/mypage}">
+        <!-- user -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21a8 8 0 1 0-16 0"/>
+            <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>마이페이지</span>
+    </a>
+</nav>
+
+</body>
+</html>
